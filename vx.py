@@ -1,18 +1,31 @@
 #!/usr/bin/env python
-
 import sys, getopt, os, random, threading, re
+try:
+  import pylorcon
+except:
+  print "Error! pylorcon missing"
 
-import pylorcon
+try:
+  import scapy.packet
+  import scapy.fields
+  from scapy.sendrecv import send,sendp,sniff
+  from scapy.layers import dot11, l2
 
-import scapy.packet
-import scapy.fields
-from scapy.sendrecv import send,sendp,sniff
-from scapy.layers import dot11, l2
+except:
+  print "Error! scapy missing"
+
+__author__ = "Arturo Filasto'"
+__copyright__ = "Copyright 2010, Arturo Filasto'"
+__credits__ = ["Arturo Filasto'"]
+__version__ = "0.1"
+__email__ = "art@baculo.org"
 
 unique = {}
 
 def usage():
-  print "VX v.0.1 - toxic packet generator"
+  """
+  """
+  print "VX v.0.1 - pwn the pwner"
   print "hacked by hellais"
   print ""
   print "-h \t this help"
@@ -27,36 +40,39 @@ def usage():
  
 
 def wepKey(WEPKEY):
-    # Match and parse WEP key
-   
-    KEYID = 0 
-    tmp_key = ""
-    if re.match('^([0-9a-fA-F]{2}){5}$', WEPKEY) or re.match ('^([0-9a-fA-F]{2}){13}$', WEPKEY):
-      tmp_key = WEPKEY
-    elif re.match('^([0-9a-fA-F]{2}[:]){4}[0-9a-fA-F]{2}$', WEPKEY) or re.match('^([0-9a-fA-F]{2}[:]){12}[0-9a-fA-F]{2}$', WEPKEY):
-      tmp_key = re.sub(':', '', WEPKEY)
-    elif re.match ('^([0-9a-fA-F]{4}[-]){2}[0-9a-fA-F]{2}$', WEPKEY) or re.match ('^([0-9a-fA-F]{4}[-]){6}[0-9a-fA-F]{2}$', WEPKEY):
-      tmp_key = re.sub('-', '', WEPKEY)
-    else:
-      print "Error! Wrong format for WEP key"
-      sys.exit(1)
+  """
+  Match and parse WEP key
+  """ 
+  KEYID = 0 
+  tmp_key = ""
+  if re.match('^([0-9a-fA-F]{2}){5}$', WEPKEY) or re.match ('^([0-9a-fA-F]{2}){13}$', WEPKEY):
+    tmp_key = WEPKEY
+  elif re.match('^([0-9a-fA-F]{2}[:]){4}[0-9a-fA-F]{2}$', WEPKEY) or re.match('^([0-9a-fA-F]{2}[:]){12}[0-9a-fA-F]{2}$', WEPKEY):
+    tmp_key = re.sub(':', '', WEPKEY)
+  elif re.match ('^([0-9a-fA-F]{4}[-]){2}[0-9a-fA-F]{2}$', WEPKEY) or re.match ('^([0-9a-fA-F]{4}[-]){6}[0-9a-fA-F]{2}$', WEPKEY):
+    tmp_key = re.sub('-', '', WEPKEY)
+  else:
+    print "Error! Wrong format for WEP key"
+    sys.exit(1)
     
-    g = lambda x: chr(int(tmp_key[::2][x],16)*16+int(tmp_key[1::2][x],16))
+  g = lambda x: chr(int(tmp_key[::2][x],16)*16+int(tmp_key[1::2][x],16))
     
-    for i in range(len(tmp_key)/2):
-      dot11.conf.wepkey += g(i)
+  for i in range(len(tmp_key)/2):
+    dot11.conf.wepkey += g(i)
     
-    print "WEP key:    %s (%dbits)" % (WEPKEY, len(tmp_key)*4)
+  print "WEP key:    %s (%dbits)" % (WEPKEY, len(tmp_key)*4)
     
-    if KEYID > 3 or KEYID < 0:
-      print "Key id:     %s (defaulted to 0 due to wrong -k argument)" % KEYID
-      KEYID = 0
-    else:
-      print "Key id:     %s" % KEYID
+  if KEYID > 3 or KEYID < 0:
+    print "Key id:     %s (defaulted to 0 due to wrong -k argument)" % KEYID
+    KEYID = 0
+  else:
+    print "Key id:     %s" % KEYID
 
 
 def randMac(prefix):
-
+  """
+  Generate a random mac address
+  """
   space = "0123456789abcdef"
   mac = ""
 
@@ -74,22 +90,11 @@ def randMac(prefix):
 
 
 def getBeacon(bssid, ssid, channel):
-    # BEACON FRAME STRUCTURE:
-    # Total bytes: 121
-    # [--Radiotap Header (32byte)--][--Beacon Frame (22bytes + 4byte@end)--][--Management Frame (12 Bytes Fixed + 49 Bytes tagged--][4 bytes end beacon]
-    #
-    # RADIOTAP HEADER:
-    # ---- 1 byte --- - 1 byte  - --- 2 bytes --  - 4 b - -- 8 bytes --  -1 b-  -1 byte-   -2 byte- - 2 byte- -1 byte-  -1 byte-  -4-
-    # [Header version][Header pad][Header length][Flags ][Mac timestamp][Flags][Data rate][Ch. freq][Ch. type][SSI sig.][Antenna][FCS]
-    #
-    # BEACON FRAME:
-    #
-    # [Type][Frame control]--[duration][dst addr][src addr][bssid addr][frag num][seq num][FCS]
-    #       [flags(to-ds e co)]
-
-  beacon_pckt = dot11.Dot11(addr1='ff:ff:ff:ff:ff:ff',            \
-                            addr2=bssid,addr3=bssid)              \
-                            / dot11.Dot11Beacon(cap='privacy+ESS')    \
+  """
+  Generate a beacon frame, src=ff:ff:ff:ff:ff:ff,dst=bssid
+  """
+  beacon_pckt = dot11.Dot11(addr1='ff:ff:ff:ff:ff:ff',addr2=bssid,addr3=bssid)
+  beacon_pckt /= dot11.Dot11Beacon(cap='privacy+ESS')    \
                             / dot11.Dot11Elt(ID='SSID',           \
                                       info=ssid)                  \
                             / dot11.Dot11Elt(ID='DSset',          \
@@ -103,13 +108,16 @@ def getBeacon(bssid, ssid, channel):
   return beacon_pckt
 
 def genWEP(iv, dst, bssid, src):
-
-    data_pckt = dot11.Dot11(type="Data", addr1=dst, \
+  """
+  Generate a WEP encrypted data packet
+  """
+  
+  data_pckt = dot11.Dot11(type="Data", addr1=dst, \
                       addr2=bssid, addr3=src,\
                       FCfield='from-DS')
 
-    data_pckt.FCfield |= 0x40
-    data_pckt /= dot11.Dot11WEP(iv = iv, keyid=4)/dot11.LLC(ctrl=3) / dot11.SNAP()\
+  data_pckt.FCfield |= 0x40
+  data_pckt /= dot11.Dot11WEP(iv = iv, keyid=4)/dot11.LLC(ctrl=3) / dot11.SNAP()\
                  / dot11.ARP(
                     op = "is-at",
                     hwsrc = src,
@@ -118,12 +126,16 @@ def genWEP(iv, dst, bssid, src):
                     pdst = "192.168.1.2")
 
 
-    #data_resp = Dot11(addr1=mac2, addr2=mac1,FCfield='to-DS')
-    #                  data_resp.FCfield |= 0x40
-    #data_resp /= Dot11WEP(iv=str(iv+1),keyid=0)/LLC()/SNAP()/scapy.packet.Padding('a'*100)
-    return data_pckt
+  #data_resp = Dot11(addr1=mac2, addr2=mac1,FCfield='to-DS')
+  #                  data_resp.FCfield |= 0x40
+  #data_resp /= Dot11WEP(iv=str(iv+1),keyid=0)/LLC()/SNAP()/scapy.packet.Padding('a'*100)
+  return data_pckt
 
 def infect(iface, channel, bssid, essid, mac, key, l, num):
+    """
+    Send wep packets encrypted with the selected WEP key into
+    the air.
+    """
     tx = pylorcon.Lorcon(iface, "mac80211")
     tx.setfunctionalmode('INJECT')
     tx.setchannel(channel)
@@ -161,6 +173,9 @@ def infect(iface, channel, bssid, essid, mac, key, l, num):
 
 
 def sniffBeacon(p):
+    """
+    Detect unique beacon packets and print them out
+    """
     global unique
     if p.haslayer(dot11.Dot11Beacon):
         if unique.count([p.addr2, p.info]) == 0:
@@ -172,19 +187,24 @@ def sniffBeacon(p):
 
  
 def demon(p):
+    """
+    """
     global unique
-    keyword = "CAT"
 
     if p.haslayer(dot11.Dot11Beacon):
         if unique.count([p.addr2, p.info]) == 0:
           unique.append([p.addr2,p.info])
-          if re.search("(?i)"+keyword, p.info):
+          if re.search(match, p.info):
             print "Success!\n\n"
             unique[0][0] = len(unique)
 
 
 def main():
   global unique
+  # Keyword used for demon mode, to autoinject once a
+  # specified beacon ssid is detected
+  global match 
+  match = ".*"
   try:
     opts, args = getopt.getopt(sys.argv[1:], "hsdi:e:b:m:k:c:")
   except getopt.GetoptError, err:
@@ -229,7 +249,11 @@ def main():
       key = arg
       n = n + 1
     elif opt in ("-c", "--channel"):
-      channel = arg
+      try: 
+        channel = int(str(arg))
+      except:
+        print "Error in channel!"
+        sys.exit(2)
     elif opt in ("-d", "--demon"):
       mode = "demon"
 
@@ -246,6 +270,7 @@ def main():
 
   if(mode == "default" and n >= 3):
     print "Default mode"
+    print "BSSID: %s MAC: %s ESSID: %s Channel: %s iface: %s" % (bssid, mac, essid, channel, iface)
     infect(iface, channel, bssid, essid, mac, key, l, 0)
  
   if(mode == "scan"):

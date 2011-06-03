@@ -1,0 +1,33 @@
+VX by Arturo Filasto' <art@baculo.org>
+
+The main idea behind VX is that it might be fun to play tricks on somebody
+trying to crack your WEP protected router.
+What we do is we forge data packets that are encrypted with the wrong WEP key
+and inject them into the air. The person trying to crack your wireless network
+will therefore not crack the real key, but your phony forged one.
+
+This tool was originaly created for the CAT 2011 event in Milan Italy, were teams
+competed against each other to crack WEP protected access points and own the machines
+behind them.
+A requirement was therefore also the necessity to be able to filter the "evil" packets
+from the sane ones. This can be easily done by specifying a known source mac address for
+the spoofed packets and filtering them out with
+  
+  tshark -R "(wlan.sa != ${MAC}) && (wlan.da != ${MAC})" -r $FILE  -w clean.cap
+
+Other fun functionality include the ability to spawn an arbitratily large amount of fake
+access points by transmitting beacons and data packets and changing just the last bytes of
+the MAC address.
+
+Broadcasting fun messages to the air as SSID names.
+
+I have only tested it with a rtl8170 ALFA Networks USB card and also not that much. This
+scripts serves mainly as a POC and is not all that robust.
+
+Requirements:
+- pylorcon
+- scapy
+
+TODO
+- Refactor the remaining code in the original script and add it to main
+
