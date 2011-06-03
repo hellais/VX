@@ -3,7 +3,7 @@ import sys, getopt, os, random, threading, re
 try:
   import pylorcon
 except:
-  print "Error! pylorcon missing"
+  print "Error! pylorcon missing (http://code.google.com/p/pylorcon/)"
 
 try:
   import scapy.packet
@@ -12,7 +12,7 @@ try:
   from scapy.layers import dot11, l2
 
 except:
-  print "Error! scapy missing"
+  print "Error! scapy missing (http://www.secdev.org/projects/scapy/)"
 
 __author__ = "Arturo Filasto'"
 __copyright__ = "Copyright 2010, Arturo Filasto'"
