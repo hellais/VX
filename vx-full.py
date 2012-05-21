@@ -1,8 +1,25 @@
 #!/usr/bin/env python
-#
-# This is the full version of VX.
-# It has not been tested so expect bugs, and lot of them!
-#
+"""
+VX-full
+*******
+Arturo Filastò
+(c) 2010
+
+This is the full version of VX.
+It has not been tested so expect bugs, and lot of them!
+
+This version include two extra features: air shitting mode and make fun of
+others mode.
+
+The air shitting mode broadcasts beacon packets and data packets that match the
+target SSID, but changes the last bytes of the BSSID, leading to a lot of
+confusion when trying to identify the target network only by SSID.
+
+The make fun of others mode broadcasts messages inside of the SSID of beacon
+packets. This leads to people getting in the list of available network the
+message you wish to transmit.
+
+"""
 
 import sys, getopt, os, random, threading, re, time
 
